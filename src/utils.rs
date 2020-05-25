@@ -5,3 +5,11 @@ macro_rules! arr32 {
         ]
     }
 }
+
+macro_rules! arr64 {
+    ( $( $item:expr ),* $(,)? ) => {
+        [
+            $( Word64($item), )*
+        ]
+    }
+}

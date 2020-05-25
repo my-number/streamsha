@@ -1,35 +1,35 @@
-use crate::arith::{Word32, rotr};
-use crate::consts::*;
+use crate::arith::{Word64, rotr};
 use crate::hash_state;
 use crate::hash_state::HashState;
 use crate::traits::*;
+use crate::consts::*;
 #[derive(Clone)]
-pub struct Sha256 {
+pub struct Sha512 {
     /// Hash values
-    h: [Word32; 8],
+    h: [Word64; 8],
     /// The max length of message (in bytes) defined in fips 180-4
-    message_len: u64,
+    message_len: u128,
     /// The length of `current_block` in bytes
     block_len: usize,
     /// The incomplete block that is waiting to be filled and hashed
-    current_block: [u8; SHA256_BLOCK_SIZE],
+    current_block: [u8; SHA512_BLOCK_SIZE],
 }
 
-impl Sha256 {
+impl Sha512 {
     /// Create new instance
     pub fn new() -> Self {
         Default::default()
     }
     /// Compute hash for current block
     fn process_block(&mut self) {
-        if self.block_len != SHA256_BLOCK_SIZE {
+        if self.block_len != SHA512_BLOCK_SIZE {
             panic!("block is not filled");
         }
-        let mut w = [Word32(0); 64];
+        let mut w = [Word64(0); 80];
         for t in 0..16 {
-            w[t] = self.get_word32_in_block(t)
+            w[t] = self.get_word64_in_block(t)
         }
-        for t in 16..64 {
+        for t in 16..80 {
             w[t] = Self::lsigma1(w[t - 2]) + w[t - 7] + Self::lsigma0(w[t - 15]) + w[t - 16];
         }
         let mut a = self.h[0];
@@ -41,8 +41,8 @@ impl Sha256 {
         let mut g = self.h[6];
         let mut h = self.h[7];
 
-        for t in 0..64 {
-            let t1 = h + Self::sigma1(e) + Self::ch(e, f, g) + SHA256_K[t] + w[t];
+        for t in 0..80 {
+            let t1 = h + Self::sigma1(e) + Self::ch(e, f, g) + SHA512_K[t] + w[t];
             let t2 = Self::sigma0(a) + Self::maj(a, b, c);
             h = g;
             g = f;
@@ -62,44 +62,49 @@ impl Sha256 {
         self.h[6] = g + self.h[6];
         self.h[7] = h + self.h[7];
 
-        self.current_block = [0u8; SHA256_BLOCK_SIZE]; // next block
+        self.current_block = [0u8; SHA512_BLOCK_SIZE]; // next block
         self.block_len = 0; // reset block
     }
 
-    /// Conbines 4 byte and returns as Word32.
-    fn get_word32_in_block(&self, i: usize) -> Word32 {
-        let m: u32 = ((self.current_block[i * 4] as u32) << 24)
-            + ((self.current_block[i * 4 + 1] as u32) << 16)
-            + ((self.current_block[i * 4 + 2] as u32) << 8)
-            + (self.current_block[i * 4 + 3] as u32);
-        Word32(m)
+    /// Conbines 8 byte and returns as Word64.
+    fn get_word64_in_block(&self, i: usize) -> Word64 {
+        let m: u64 =
+              ((self.current_block[i * 4] as u64) << 56)
+            + ((self.current_block[i * 4 + 1] as u64) << 48)
+            + ((self.current_block[i * 4 + 2] as u64) << 40)
+            + ((self.current_block[i * 4 + 3] as u64) << 32)
+            + ((self.current_block[i * 4 + 4] as u64) << 24)
+            + ((self.current_block[i * 4 + 5] as u64) << 16)
+            + ((self.current_block[i * 4 + 6] as u64) << 8)
+            + (self.current_block[i * 4 + 7] as u64);
+        Word64(m)
     }
 }
 
-/// SHA256 functions
-impl Sha256 {
-    fn sigma0(x: Word32) -> Word32 {
-        rotr(x, 2) ^ rotr(x, 13) ^ rotr(x, 22)
+/// SHA512 functions
+impl Sha512 {
+    fn sigma0(x: Word64) -> Word64 {
+        rotr(x, 28) ^ rotr(x, 34) ^ rotr(x, 39)
     }
-    fn sigma1(x: Word32) -> Word32 {
-        rotr(x, 6) ^ rotr(x, 11) ^ rotr(x, 25)
+    fn sigma1(x: Word64) -> Word64 {
+        rotr(x, 14) ^ rotr(x, 18) ^ rotr(x, 41)
     }
-    fn lsigma0(x: Word32) -> Word32 {
-        rotr(x, 7) ^ rotr(x, 18) ^ (x >> 3)
+    fn lsigma0(x: Word64) -> Word64 {
+        rotr(x, 1) ^ rotr(x, 8) ^ (x >> 7)
     }
-    fn lsigma1(x: Word32) -> Word32 {
-        rotr(x, 17) ^ rotr(x, 19) ^ (x >> 10)
+    fn lsigma1(x: Word64) -> Word64 {
+        rotr(x, 19) ^ rotr(x, 61) ^ (x >> 6)
     }
-    fn ch(x: Word32, y: Word32, z: Word32) -> Word32 {
+    fn ch(x: Word64, y: Word64, z: Word64) -> Word64 {
         (x & y) ^ (!x & z)
     }
-    fn maj(x: Word32, y: Word32, z: Word32) -> Word32 {
+    fn maj(x: Word64, y: Word64, z: Word64) -> Word64 {
         (x & y) ^ (x & z) ^ (y & z)
     }
 }
-impl StreamHasher for Sha256 {
-    type Output = [u8; 32];
-    const BLOCK_SIZE: usize = SHA256_BLOCK_SIZE;
+impl StreamHasher for Sha512 {
+    type Output = [u8; 64];
+    const BLOCK_SIZE: usize = SHA512_BLOCK_SIZE;
     fn update(&mut self, buf: &[u8]) -> usize {
         let len = buf.len();
         if len == 0 {
@@ -113,7 +118,7 @@ impl StreamHasher for Sha256 {
             // overflows block or buf.len() == writable_len
             writable_area.clone_from_slice(&buf[0..writable_len]); // fill block
             self.block_len += writable_len;
-            self.message_len += writable_len as u64;
+            self.message_len += writable_len as u128;
             self.process_block(); // perform hash calculation
             self.update(&buf[writable_len..]); // recursively write remaining
         } else {
@@ -121,34 +126,33 @@ impl StreamHasher for Sha256 {
             let write_area = &mut self.current_block[self.block_len..self.block_len + len];
             write_area.clone_from_slice(&buf[..]);
             self.block_len += len;
-            self.message_len += len as u64;
+            self.message_len += len as u128;
         }
         len
     }
     fn finish(&mut self) -> Self::Output {
         self.current_block[self.block_len] = 0x80;
-        if self.block_len + 1 + 8 > Self::BLOCK_SIZE {
-            // data||0x80||size(u64) overflows block
-            self.block_len = Self::BLOCK_SIZE;
+        if self.block_len + 1 + 16 > Self::BLOCK_SIZE {
+            // data||0x80||size(u128) overflows block
             self.process_block(); // perform hash calculation
         }
-        let writable_area = &mut self.current_block[Self::BLOCK_SIZE - 8..Self::BLOCK_SIZE];
+        let writable_area = &mut self.current_block[Self::BLOCK_SIZE - 16..Self::BLOCK_SIZE];
         let len_bits = self.message_len * 8;
         writable_area.clone_from_slice(&len_bits.to_be_bytes());
         self.block_len = Self::BLOCK_SIZE;
         self.process_block();
-        let mut final_hash: Self::Output = Default::default();
+        let mut final_hash: Self::Output = [0; 64];
         for i in 0..8 {
-            let word_area = &mut final_hash[i * 4..i * 4 + 4];
+            let word_area = &mut final_hash[i * 8..i * 8 + 8];
             word_area.clone_from_slice(&self.h[i].0.to_be_bytes());
         }
         return final_hash;
     }
     
 }
-impl Resumable for Sha256 {
+impl Resumable for Sha512 {
     fn pause(&self) -> HashState {
-        let h: [u32; 8] = [
+        let h: [u64; 8] = [
             self.h[0].0,
             self.h[1].0,
             self.h[2].0,
@@ -158,7 +162,7 @@ impl Resumable for Sha256 {
             self.h[6].0,
             self.h[7].0,
         ];
-        HashState::Sha256(hash_state::Sha256HashState {
+        HashState::Sha512(hash_state::Sha512HashState {
             h,
             message_len: self.message_len,
             block_len: self.block_len,
@@ -167,8 +171,8 @@ impl Resumable for Sha256 {
     }
     fn resume(hash_state: HashState) -> Result<Self, hash_state::Error> {
         match hash_state {
-            HashState::Sha256(hs) => Ok(Self {
-                h: arr32![hs.h[0], hs.h[1], hs.h[2], hs.h[3], hs.h[4], hs.h[5], hs.h[6], hs.h[7]],
+            HashState::Sha512(hs) => Ok(Self {
+                h: arr64![hs.h[0], hs.h[1], hs.h[2], hs.h[3], hs.h[4], hs.h[5], hs.h[6], hs.h[7]],
                 message_len: hs.message_len,
                 block_len: hs.block_len,
                 current_block: hs.current_block,
@@ -177,14 +181,13 @@ impl Resumable for Sha256 {
         }
     }
 }
-impl Default for Sha256 {
+impl Default for Sha512 {
     fn default() -> Self {
         Self {
-            h: SHA256_H,
-            current_block: [0u8; SHA256_BLOCK_SIZE],
+            h: SHA512_H,
+            current_block: [0u8; SHA512_BLOCK_SIZE],
             block_len: 0usize,
-            message_len: 0u64,
+            message_len: 0u128,
         }
     }
 }
-
