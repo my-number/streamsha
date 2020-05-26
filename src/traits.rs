@@ -5,8 +5,9 @@ pub trait StreamHasher {
     const BLOCK_SIZE: usize;
     /// write to pending block, process block, create new block. Never finish with pending block is filled. End with new empty block if block filled.
     fn update(&mut self, buf: &[u8]) -> usize;
-    /// Pad and process the last pending block then output the final hash. ハッシュ生成完了した後の動作はTBDです
-    fn finish(&mut self) -> Self::Output;
+    /// Pad and process the last pending block then output the final hash.
+    /// NOTE: After finished, the struct will be moved out, making it unreusable.
+    fn finish(self) -> Self::Output;
 }
 pub trait Resumable: Sized {
     /// Returns the current hash state.

@@ -3,7 +3,7 @@ use crate::hash_state;
 use crate::hash_state::HashState;
 use crate::traits::*;
 use crate::consts::*;
-#[derive(Clone)]
+
 pub struct Sha512 {
     /// Hash values
     h: [Word64; 8],
@@ -69,14 +69,14 @@ impl Sha512 {
     /// Conbines 8 byte and returns as Word64.
     fn get_word64_in_block(&self, i: usize) -> Word64 {
         let m: u64 =
-              ((self.current_block[i * 4] as u64) << 56)
-            + ((self.current_block[i * 4 + 1] as u64) << 48)
-            + ((self.current_block[i * 4 + 2] as u64) << 40)
-            + ((self.current_block[i * 4 + 3] as u64) << 32)
-            + ((self.current_block[i * 4 + 4] as u64) << 24)
-            + ((self.current_block[i * 4 + 5] as u64) << 16)
-            + ((self.current_block[i * 4 + 6] as u64) << 8)
-            + (self.current_block[i * 4 + 7] as u64);
+              ((self.current_block[i * 8] as u64) << 56)
+            + ((self.current_block[i * 8 + 1] as u64) << 48)
+            + ((self.current_block[i * 8 + 2] as u64) << 40)
+            + ((self.current_block[i * 8 + 3] as u64) << 32)
+            + ((self.current_block[i * 8 + 4] as u64) << 24)
+            + ((self.current_block[i * 8 + 5] as u64) << 16)
+            + ((self.current_block[i * 8 + 6] as u64) << 8)
+            + (self.current_block[i * 8 + 7] as u64);
         Word64(m)
     }
 }
@@ -130,10 +130,12 @@ impl StreamHasher for Sha512 {
         }
         len
     }
-    fn finish(&mut self) -> Self::Output {
+    fn finish(mut self) -> Self::Output {
         self.current_block[self.block_len] = 0x80;
         if self.block_len + 1 + 16 > Self::BLOCK_SIZE {
             // data||0x80||size(u128) overflows block
+            
+            self.block_len = Self::BLOCK_SIZE;
             self.process_block(); // perform hash calculation
         }
         let writable_area = &mut self.current_block[Self::BLOCK_SIZE - 16..Self::BLOCK_SIZE];

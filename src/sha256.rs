@@ -3,7 +3,7 @@ use crate::consts::*;
 use crate::hash_state;
 use crate::hash_state::HashState;
 use crate::traits::*;
-#[derive(Clone)]
+
 pub struct Sha256 {
     /// Hash values
     h: [Word32; 8],
@@ -125,7 +125,7 @@ impl StreamHasher for Sha256 {
         }
         len
     }
-    fn finish(&mut self) -> Self::Output {
+    fn finish(mut self) -> Self::Output {
         self.current_block[self.block_len] = 0x80;
         if self.block_len + 1 + 8 > Self::BLOCK_SIZE {
             // data||0x80||size(u64) overflows block
