@@ -112,3 +112,19 @@ pub const SHA512_H: [Word64; 8] = arr64![
 ];
 // 1024 bit SHA-512 block
 pub const SHA512_BLOCK_SIZE: usize = 128;
+
+pub const SHA1_H: [Word32; 5] = arr32![
+    0x67452301, 0xefcdab89, 0x98badcfe, 0x10325476, 0xc3d2e1f0
+];
+
+#[allow(non_snake_case)]
+pub const fn SHA1_K(t: usize) -> Word32 {
+    (arr32![
+        0x5a827999,
+        0x6ed9eba1,
+        0x8f1bbcdc,
+        0xca62c1d6
+    ])[t/20 as usize]
+}
+
+pub const SHA1_BLOCK_SIZE: usize = 64;

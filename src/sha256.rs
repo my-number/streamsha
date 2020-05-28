@@ -3,7 +3,7 @@ use crate::consts::*;
 use crate::hash_state;
 use crate::hash_state::HashState;
 use crate::traits::*;
-
+/// Calculates SHA-256
 pub struct Sha256 {
     /// Hash values
     h: [Word32; 8],
@@ -147,7 +147,7 @@ impl StreamHasher for Sha256 {
     
 }
 impl Resumable for Sha256 {
-    fn pause(&self) -> HashState {
+    fn pause(self) -> HashState {
         let h: [u32; 8] = [
             self.h[0].0,
             self.h[1].0,
