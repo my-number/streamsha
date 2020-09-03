@@ -1,11 +1,14 @@
 [package]
 name = "streamsha"
-version = "0.1.0"
+version = "1.0.0"
 authors = ["yuki-js"]
 edition = "2018"
 description = "A streamed, resumable SHA (Secure Hashing Algorithm) library"
 repository = "https://github.com/my-number/streamsha"
 license = "MIT"
 keywords = ["hash", "sha", "hashing", "sha256", "sha1"]
-[dependencies]
-hex-literal = { version = "0.2.1", optional = true }
+
+[dev-dependencies]
+hex-literal = "0.2.1"
+hex-slice = "0.1.4"
+lazy_static = "1.4.0"
