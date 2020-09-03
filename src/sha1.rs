@@ -17,8 +17,13 @@ pub struct Sha1 {
 
 impl Sha1 {
     /// Create new instance
-    pub fn new() -> Self {
-        Default::default()
+    pub const fn new() -> Self {
+        Self {
+            h: SHA1_H,
+            current_block: [0u8; SHA1_BLOCK_SIZE],
+            block_len: 0usize,
+            message_len: 0u64,
+        }
     }
     /// Compute hash for current block
     fn process_block(&mut self) {
@@ -56,7 +61,7 @@ impl Sha1 {
     }
 
     /// Conbines 4 byte and returns as Word32.
-    fn get_word32_in_block(&self, i: usize) -> Word32 {
+    const fn get_word32_in_block(&self, i: usize) -> Word32 {
         let m: u32 = ((self.current_block[i * 4] as u32) << 24)
             + ((self.current_block[i * 4 + 1] as u32) << 16)
             + ((self.current_block[i * 4 + 2] as u32) << 8)
@@ -164,11 +169,6 @@ impl Resumable for Sha1 {
 }
 impl Default for Sha1 {
     fn default() -> Self {
-        Self {
-            h: SHA1_H,
-            current_block: [0u8; SHA1_BLOCK_SIZE],
-            block_len: 0usize,
-            message_len: 0u64,
-        }
+        Self::new()
     }
 }

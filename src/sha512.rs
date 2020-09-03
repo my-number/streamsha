@@ -19,7 +19,12 @@ pub struct Sha512 {
 impl Sha512 {
     /// Create new instance
     pub fn new() -> Self {
-        Default::default()
+        Self {
+            h: SHA512_H,
+            current_block: [0u8; SHA512_BLOCK_SIZE],
+            block_len: 0usize,
+            message_len: 0u128,
+        }
     }
     /// Compute hash for current block
     fn process_block(&mut self) {
@@ -68,7 +73,7 @@ impl Sha512 {
     }
 
     /// Conbines 8 byte and returns as Word64.
-    fn get_word64_in_block(&self, i: usize) -> Word64 {
+    const fn get_word64_in_block(&self, i: usize) -> Word64 {
         let m: u64 =
               ((self.current_block[i * 8] as u64) << 56)
             + ((self.current_block[i * 8 + 1] as u64) << 48)
@@ -186,11 +191,6 @@ impl Resumable for Sha512 {
 }
 impl Default for Sha512 {
     fn default() -> Self {
-        Self {
-            h: SHA512_H,
-            current_block: [0u8; SHA512_BLOCK_SIZE],
-            block_len: 0usize,
-            message_len: 0u128,
-        }
+        Self::new()
     }
 }

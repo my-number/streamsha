@@ -17,8 +17,13 @@ pub struct Sha256 {
 
 impl Sha256 {
     /// Create new instance
-    pub fn new() -> Self {
-        Default::default()
+    pub const fn new() -> Self {
+        Self {
+            h: SHA256_H,
+            current_block: [0u8; SHA256_BLOCK_SIZE],
+            block_len: 0usize,
+            message_len: 0u64,
+        }
     }
     /// Compute hash for current block
     fn process_block(&mut self) {
@@ -67,7 +72,7 @@ impl Sha256 {
     }
 
     /// Conbines 4 byte and returns as Word32.
-    fn get_word32_in_block(&self, i: usize) -> Word32 {
+    const fn get_word32_in_block(&self, i: usize) -> Word32 {
         let m: u32 = ((self.current_block[i * 4] as u32) << 24)
             + ((self.current_block[i * 4 + 1] as u32) << 16)
             + ((self.current_block[i * 4 + 2] as u32) << 8)
@@ -179,12 +184,7 @@ impl Resumable for Sha256 {
 }
 impl Default for Sha256 {
     fn default() -> Self {
-        Self {
-            h: SHA256_H,
-            current_block: [0u8; SHA256_BLOCK_SIZE],
-            block_len: 0usize,
-            message_len: 0u64,
-        }
+        Self::new()
     }
 }
 
