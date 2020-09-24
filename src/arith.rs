@@ -23,6 +23,6 @@ mod tests {
     fn rotation_equivalence() {
         assert_eq!(rotr(32u32, 2), rotl(32u32, 30));
         assert_eq!(rotr(32u64, 2), rotl(32u64, 62));
-        assert_eq!(rotr(Word64(32u64), 2), rotl(Word64(32u64), 62));
+        assert_eq!(rotr((32u64), 2), rotl((32u64), 62));
     }
 }
