@@ -1,5 +1,5 @@
 use hex_literal::hex;
-use streamsha::hash_state::{HashState, Sha256HashState};
+use streamsha::hash_state::HashState;
 use streamsha::traits::{Resumable, StreamHasher};
 use streamsha::{Sha1, Sha256};
 extern crate hex_slice;

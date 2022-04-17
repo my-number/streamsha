@@ -1,4 +1,3 @@
-use crate::arith::rotr;
 use crate::consts::*;
 use crate::hash_state;
 use crate::hash_state::HashState;
@@ -30,7 +29,7 @@ impl Sha256 {
         if self.block_len != SHA256_BLOCK_SIZE {
             panic!("block is not filled");
         }
-        let mut w = [0 as u32; 64];
+        let mut w = [0_u32; 64];
         for t in 0..16 {
             w[t] = self.get_word32_in_block(t)
         }
@@ -80,18 +79,22 @@ impl Sha256 {
     }
 }
 
+const fn rotr(x: u32, n: usize) -> u32 {
+    (x >> n) | (x << (core::mem::size_of::<u32>() * 8 - n))
+}
+
 /// SHA256 functions
 impl Sha256 {
-    fn sigma0(x: u32) -> u32 {
+    const fn sigma0(x: u32) -> u32 {
         rotr(x, 2) ^ rotr(x, 13) ^ rotr(x, 22)
     }
-    fn sigma1(x: u32) -> u32 {
+    const fn sigma1(x: u32) -> u32 {
         rotr(x, 6) ^ rotr(x, 11) ^ rotr(x, 25)
     }
-    fn lsigma0(x: u32) -> u32 {
+    const fn lsigma0(x: u32) -> u32 {
         rotr(x, 7) ^ rotr(x, 18) ^ (x >> 3)
     }
-    fn lsigma1(x: u32) -> u32 {
+    const fn lsigma1(x: u32) -> u32 {
         rotr(x, 17) ^ rotr(x, 19) ^ (x >> 10)
     }
     const fn ch(x: u32, y: u32, z: u32) -> u32 {
@@ -123,7 +126,7 @@ impl StreamHasher for Sha256 {
         } else {
             // don't fill block
             let write_area = &mut self.current_block[self.block_len..self.block_len + len];
-            write_area.clone_from_slice(&buf[..]);
+            write_area.clone_from_slice(buf);
             self.block_len += len;
             self.message_len += len as u64;
         }

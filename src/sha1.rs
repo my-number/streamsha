@@ -1,4 +1,3 @@
-use crate::arith::rotl;
 use crate::consts::*;
 use crate::hash_state;
 use crate::hash_state::HashState;
@@ -13,6 +12,10 @@ pub struct Sha1 {
     block_len: usize,
     /// The incomplete block that is waiting to be filled and hashed
     current_block: [u8; SHA1_BLOCK_SIZE],
+}
+
+const fn rotl(x: u32, n: usize) -> u32 {
+    (x << n) | (x >> (core::mem::size_of::<u32>() * 8 - n))
 }
 
 impl Sha1 {

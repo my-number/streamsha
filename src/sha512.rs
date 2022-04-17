@@ -1,4 +1,3 @@
-use crate::arith::rotr;
 use crate::consts::*;
 use crate::hash_state;
 use crate::hash_state::HashState;
@@ -85,24 +84,28 @@ impl Sha512 {
     }
 }
 
+const fn rotr(x: u64, n: usize) -> u64 {
+    (x >> n) | (x << (core::mem::size_of::<u64>() * 8 - n))
+}
+
 /// SHA512 functions
 impl Sha512 {
-    fn sigma0(x: u64) -> u64 {
+    const fn sigma0(x: u64) -> u64 {
         rotr(x, 28) ^ rotr(x, 34) ^ rotr(x, 39)
     }
-    fn sigma1(x: u64) -> u64 {
+    const fn sigma1(x: u64) -> u64 {
         rotr(x, 14) ^ rotr(x, 18) ^ rotr(x, 41)
     }
-    fn lsigma0(x: u64) -> u64 {
+    const fn lsigma0(x: u64) -> u64 {
         rotr(x, 1) ^ rotr(x, 8) ^ (x >> 7)
     }
-    fn lsigma1(x: u64) -> u64 {
+    const fn lsigma1(x: u64) -> u64 {
         rotr(x, 19) ^ rotr(x, 61) ^ (x >> 6)
     }
-    fn ch(x: u64, y: u64, z: u64) -> u64 {
+    const fn ch(x: u64, y: u64, z: u64) -> u64 {
         (x & y) ^ (!x & z)
     }
-    fn maj(x: u64, y: u64, z: u64) -> u64 {
+    const fn maj(x: u64, y: u64, z: u64) -> u64 {
         (x & y) ^ (x & z) ^ (y & z)
     }
 }
