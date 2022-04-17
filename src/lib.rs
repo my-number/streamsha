@@ -32,6 +32,7 @@
 #![no_std]
 mod consts;
 pub mod hash_state;
+mod macros;
 mod sha1;
 mod sha256;
 mod sha512;

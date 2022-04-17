@@ -1,6 +1,7 @@
 use crate::consts::*;
 use crate::hash_state;
 use crate::hash_state::HashState;
+use crate::times;
 use crate::traits::*;
 /// Calculates SHA-256
 pub struct Sha256 {
@@ -26,45 +27,15 @@ impl Sha256 {
     }
     /// Compute hash for current block
     fn process_block(&mut self) {
-        if self.block_len != SHA256_BLOCK_SIZE {
-            panic!("block is not filled");
-        }
-        let mut w = [0_u32; 64];
-        for t in 0..16 {
-            w[t] = self.get_word32_in_block(t)
-        }
-        for t in 16..64 {
-            w[t] = Self::lsigma1(w[t - 2]) + w[t - 7] + Self::lsigma0(w[t - 15]) + w[t - 16];
-        }
-        let mut a = self.h[0];
-        let mut b = self.h[1];
-        let mut c = self.h[2];
-        let mut d = self.h[3];
-        let mut e = self.h[4];
-        let mut f = self.h[5];
-        let mut g = self.h[6];
-        let mut h = self.h[7];
-
-        for t in 0..64 {
-            let t1 = h + Self::sigma1(e) + Self::ch(e, f, g) + SHA256_K[t] + w[t];
-            let t2 = Self::sigma0(a) + Self::maj(a, b, c);
-            h = g;
-            g = f;
-            f = e;
-            e = d + t1;
-            d = c;
-            c = b;
-            b = a;
-            a = t1 + t2;
-        }
-        self.h[0] = a + self.h[0];
-        self.h[1] = b + self.h[1];
-        self.h[2] = c + self.h[2];
-        self.h[3] = d + self.h[3];
-        self.h[4] = e + self.h[4];
-        self.h[5] = f + self.h[5];
-        self.h[6] = g + self.h[6];
-        self.h[7] = h + self.h[7];
+        let [a, b, c, d, e, f, g, h] = self.process_block_parts();
+        self.h[0] += a;
+        self.h[1] += b;
+        self.h[2] += c;
+        self.h[3] += d;
+        self.h[4] += e;
+        self.h[5] += f;
+        self.h[6] += g;
+        self.h[7] += h;
 
         self.current_block = [0u8; SHA256_BLOCK_SIZE]; // next block
         self.block_len = 0; // reset block
@@ -76,6 +47,37 @@ impl Sha256 {
             + ((self.current_block[i * 4 + 1] as u32) << 16)
             + ((self.current_block[i * 4 + 2] as u32) << 8)
             + (self.current_block[i * 4 + 3] as u32)
+    }
+    const fn process_block_parts(&self) -> [u32; 8] {
+        if self.block_len != SHA256_BLOCK_SIZE {
+            panic!("block is not filled");
+        }
+        let mut w = [0_u32; 64];
+        times!(0, 16; t => { w[t] = self.get_word32_in_block(t) });
+
+        times!( 16, 64; t => { w[t] = Self::lsigma1(w[t - 2]) + w[t - 7] + Self::lsigma0(w[t - 15]) + w[t - 16]; });
+        let mut a = self.h[0];
+        let mut b = self.h[1];
+        let mut c = self.h[2];
+        let mut d = self.h[3];
+        let mut e = self.h[4];
+        let mut f = self.h[5];
+        let mut g = self.h[6];
+        let mut h = self.h[7];
+
+        times!( 0, 64; t => {
+            let t1 = h + Self::sigma1(e) + Self::ch(e, f, g) + SHA256_K[t] + w[t];
+            let t2 = Self::sigma0(a) + Self::maj(a, b, c);
+            h = g;
+            g = f;
+            f = e;
+            e = d + t1;
+            d = c;
+            c = b;
+            b = a;
+            a = t1 + t2;
+        });
+        [a, b, c, d, e, f, g, h]
     }
 }
 
@@ -149,7 +151,7 @@ impl StreamHasher for Sha256 {
             let word_area = &mut final_hash[i * 4..i * 4 + 4];
             word_area.clone_from_slice(&self.h[i].to_be_bytes());
         }
-        return final_hash;
+        final_hash
     }
 }
 impl Resumable for Sha256 {
