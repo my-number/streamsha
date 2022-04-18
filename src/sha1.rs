@@ -1,4 +1,3 @@
-use crate::arith::{rotl, Word32};
 use crate::consts::*;
 use crate::hash_state;
 use crate::hash_state::HashState;
@@ -6,7 +5,7 @@ use crate::traits::*;
 /// Calculates SHA-1
 pub struct Sha1 {
     /// Hash values
-    h: [Word32; 5],
+    h: [u32; 5],
     /// The max length of message (in bytes) defined in fips 180-4
     message_len: u64,
     /// The length of `current_block` in bytes
@@ -27,69 +26,88 @@ impl Sha1 {
     }
     /// Compute hash for current block
     fn process_block(&mut self) {
-        if self.block_len != SHA1_BLOCK_SIZE {
-            panic!("block is not filled");
-        }
-        let mut w = [Word32(0); 80];
-        for t in 0..16 {
-            w[t] = self.get_word32_in_block(t);
-        }
-        for t in 16..80 {
-            w[t] = rotl(w[t-3]^w[t-8]^w[t-14]^w[t-16] , 1);
-        }
-        let mut a = self.h[0];
-        let mut b = self.h[1];
-        let mut c = self.h[2];
-        let mut d = self.h[3];
-        let mut e = self.h[4];
-        for t in 0..80 {
-            let t1 = rotl(a, 5) + Self::ft(t, b, c, d) + e + SHA1_K(t) + w[t];
-            e = d;
-            d = c;
-            c = rotl(b, 30);
-            b = a;
-            a = t1;
-        }
-        self.h[0] = a + self.h[0];
-        self.h[1] = b + self.h[1];
-        self.h[2] = c + self.h[2];
-        self.h[3] = d + self.h[3];
-        self.h[4] = e + self.h[4];
+        let (a, b, c, d, e) = self.process_block_parts();
+
+        self.h[0] = self.h[0].wrapping_add(a);
+        self.h[1] = self.h[1].wrapping_add(b);
+        self.h[2] = self.h[2].wrapping_add(c);
+        self.h[3] = self.h[3].wrapping_add(d);
+        self.h[4] = self.h[4].wrapping_add(e);
 
         self.current_block = [0u8; SHA1_BLOCK_SIZE]; // next block
         self.block_len = 0; // reset block
     }
 
-    /// Conbines 4 byte and returns as Word32.
-    const fn get_word32_in_block(&self, i: usize) -> Word32 {
-        let m: u32 = ((self.current_block[i * 4] as u32) << 24)
-            + ((self.current_block[i * 4 + 1] as u32) << 16)
-            + ((self.current_block[i * 4 + 2] as u32) << 8)
-            + (self.current_block[i * 4 + 3] as u32);
-        Word32(m)
+    /// Conbines 4 byte and returns as u32.
+    const fn get_word32_in_block(&self, i: usize) -> u32 {
+        ((self.current_block[i * 4] as u32) << 24)
+            | ((self.current_block[i * 4 + 1] as u32) << 16)
+            | ((self.current_block[i * 4 + 2] as u32) << 8)
+            | (self.current_block[i * 4 + 3] as u32)
+    }
+
+    const fn process_block_parts(&self) -> (u32, u32, u32, u32, u32) {
+        if self.block_len != SHA1_BLOCK_SIZE {
+            panic!("block is not filled");
+        }
+        let mut w = [0_u32; 80];
+
+        let mut t = 0;
+        while t < 16 {
+            w[t] = self.get_word32_in_block(t);
+            t += 1;
+        }
+        while t < 80 {
+            w[t] = rotl(w[t - 3] ^ w[t - 8] ^ w[t - 14] ^ w[t - 16], 1);
+            t += 1;
+        }
+
+        let mut a = self.h[0];
+        let mut b = self.h[1];
+        let mut c = self.h[2];
+        let mut d = self.h[3];
+        let mut e = self.h[4];
+
+        let mut t = 0;
+        while t < 80 {
+            let t1 = rotl(a, 5)
+                .wrapping_add(ft(t, b, c, d))
+                .wrapping_add(e)
+                .wrapping_add(SHA1_K(t))
+                .wrapping_add(w[t]);
+            e = d;
+            d = c;
+            c = rotl(b, 30);
+            b = a;
+            a = t1;
+
+            t += 1;
+        }
+        (a, b, c, d, e)
     }
 }
 
-/// SHA1 functions
-impl Sha1 {
-    fn ft(t: usize, x: Word32, y: Word32, z: Word32) -> Word32 {
-        match t {
-            0..=19 => Self::ch(x, y, z),
-            20..=39 => Self::parity(x, y, z),
-            40..=59 => Self::maj(x, y, z),
-            60..=79 => Self::parity(x, y, z),
-            _ => panic!("t is out of range")
-        }
+const fn rotl(x: u32, n: usize) -> u32 {
+    (x << n) | (x >> (32 - n))
+}
+
+const fn ft(t: usize, x: u32, y: u32, z: u32) -> u32 {
+    match t {
+        0..=19 => ch(x, y, z),
+        20..=39 => parity(x, y, z),
+        40..=59 => maj(x, y, z),
+        60..=79 => parity(x, y, z),
+        _ => panic!("t is out of range"),
     }
-    fn ch(x: Word32, y: Word32, z: Word32) -> Word32 {
-        (x & y) ^ (!x & z)
-    }
-    fn maj(x: Word32, y: Word32, z: Word32) -> Word32 {
-        (x & y) ^ (x & z) ^ (y & z)
-    }
-    fn parity(x: Word32, y: Word32, z: Word32) -> Word32 {
-        x ^ y ^ z
-    }
+}
+const fn ch(x: u32, y: u32, z: u32) -> u32 {
+    (x & y) ^ (!x & z)
+}
+const fn maj(x: u32, y: u32, z: u32) -> u32 {
+    (x & y) ^ (x & z) ^ (y & z)
+}
+const fn parity(x: u32, y: u32, z: u32) -> u32 {
+    x ^ y ^ z
 }
 impl StreamHasher for Sha1 {
     type Output = [u8; 20];
@@ -113,7 +131,7 @@ impl StreamHasher for Sha1 {
         } else {
             // don't fill block
             let write_area = &mut self.current_block[self.block_len..self.block_len + len];
-            write_area.clone_from_slice(&buf[..]);
+            write_area.clone_from_slice(buf);
             self.block_len += len;
             self.message_len += len as u64;
         }
@@ -134,20 +152,14 @@ impl StreamHasher for Sha1 {
         let mut final_hash: Self::Output = Default::default();
         for i in 0..5 {
             let word_area = &mut final_hash[i * 4..i * 4 + 4];
-            word_area.clone_from_slice(&self.h[i].0.to_be_bytes());
+            word_area.clone_from_slice(&self.h[i].to_be_bytes());
         }
-        return final_hash;
+        final_hash
     }
 }
 impl Resumable for Sha1 {
     fn pause(self) -> HashState {
-        let h: [u32; 5] = [
-            self.h[0].0,
-            self.h[1].0,
-            self.h[2].0,
-            self.h[3].0,
-            self.h[4].0,
-        ];
+        let h: [u32; 5] = [self.h[0], self.h[1], self.h[2], self.h[3], self.h[4]];
         HashState::Sha1(hash_state::Sha1HashState {
             h,
             message_len: self.message_len,
@@ -158,7 +170,7 @@ impl Resumable for Sha1 {
     fn resume(hash_state: HashState) -> Result<Self, hash_state::Error> {
         match hash_state {
             HashState::Sha1(hs) => Ok(Self {
-                h: arr32![hs.h[0], hs.h[1], hs.h[2], hs.h[3], hs.h[4]],
+                h: [hs.h[0], hs.h[1], hs.h[2], hs.h[3], hs.h[4]],
                 message_len: hs.message_len,
                 block_len: hs.block_len,
                 current_block: hs.current_block,
