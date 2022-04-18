@@ -37,7 +37,6 @@ mod sha256;
 mod sha512;
 pub mod traits;
 
-mod arith;
 pub use self::sha1::Sha1;
 pub use self::sha256::Sha256;
 pub use self::sha512::Sha512;

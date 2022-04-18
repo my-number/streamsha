@@ -1,5 +1,5 @@
 use hex_literal::hex;
-use streamsha::traits::{Resumable, StreamHasher};
+use streamsha::traits::StreamHasher;
 use streamsha::*;
 
 const vectors: &[(&[u8], [u8; 20])] = &[

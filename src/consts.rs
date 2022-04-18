@@ -115,7 +115,7 @@ pub const SHA1_H: [u32; 5] = [0x67452301, 0xefcdab89, 0x98badcfe, 0x10325476, 0x
 
 #[allow(non_snake_case)]
 pub const fn SHA1_K(t: usize) -> u32 {
-    ([0x5a827999, 0x6ed9eba1, 0x8f1bbcdc, 0xca62c1d6])[t / 20 as usize]
+    ([0x5a827999, 0x6ed9eba1, 0x8f1bbcdc, 0xca62c1d6])[t / 20_usize]
 }
 
 pub const SHA1_BLOCK_SIZE: usize = 64;
